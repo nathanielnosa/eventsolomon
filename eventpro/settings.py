@@ -14,7 +14,7 @@ SECRET_KEY = 'django-insecure-&lq_7h(yr86+0heuaf06#mz%gs43(yjd7i)1l(ty^-2(ftaaux
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','https://eventsolomon.onrender.com']
+ALLOWED_HOSTS = ['localhost','https://eventsolomon.onrender.com','eventsolomon.onrender.com']
 
 
 # Application definition
