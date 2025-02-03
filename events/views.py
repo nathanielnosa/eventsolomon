@@ -75,12 +75,16 @@ class EventView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = EventSerializer(data=request.data)
+        # Manually parse the FormData
+        data = request.data.dict()
+        data['contacts'] = json.loads(data.get('contacts', '[]'))
+        data['tagged_users'] = request.data.getlist('tagged_users')
+        
+        serializer = EventSerializer(data=data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(created_by=request.user)  # Set logged-in user as the creator
+            serializer.save(created_by=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class EventGroupView(APIView):
     permission_classes = [IsAuthenticated]
