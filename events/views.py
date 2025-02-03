@@ -74,27 +74,18 @@ class EventView(APIView):
             serializer = EventSerializer(events, many=True)
         return Response(serializer.data)
 
-    # In views.py (Backend)
-class EventView(APIView):
-    permission_classes = [IsAuthenticated]
-
     def post(self, request):
-        try:
-            data = request.data.dict()
-            data['contacts'] = json.loads(data.get('contacts', '[]'))
-            data['tagged_users'] = request.data.getlist('tagged_users')
+        # Manually parse the FormData
+        data = request.data.dict()
+        data['contacts'] = json.loads(data.get('contacts', '[]'))
+        data['tagged_users'] = request.data.getlist('tagged_users')
+        
+        serializer = EventSerializer(data=data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save(created_by=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            serializer = EventSerializer(data=data, context={'request': request})
-            if serializer.is_valid():
-                # ✅ Fix: Save to the 'user' field, not 'created_by'
-                serializer.save(user=request.user)  # <-- CHANGE HERE
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            else:
-                logger.error(f"Serializer errors: {serializer.errors}")
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            logger.error(f"Internal Server Error: {str(e)}", exc_info=True)
-            return Response({"error": "Internal Server Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class EventGroupView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -109,19 +100,3 @@ class EventGroupView(APIView):
             serializer.save(created_by=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# In views.py (Backend)
-class UserLookupView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        username = request.query_params.get('username')
-        if not username:
-            return Response({"error": "Username is required"}, status=400)
-        
-        user = UserProfile.objects.filter(username=username).first()
-        if not user:
-            return Response({"error": "User not found"}, status=404)
-        
-        return Response({"id": user.id, "username": user.username})
