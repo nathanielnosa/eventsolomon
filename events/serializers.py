@@ -42,26 +42,56 @@ class EventGroupSerializer(serializers.ModelSerializer):
         model = EventGroup
         fields = ['id', 'name', 'description', 'created_by']
 
+# class EventSerializer(serializers.ModelSerializer):
+#     contacts = ContactInfoSerializer(many=True)
+
+#     class Meta:
+#         model = Event
+#         fields = ['id', 'title', 'description', 'group', 'contacts', 'tagged_users', 'created_at', 'file']
+
+#     def create(self, validated_data):
+#         contacts_data = validated_data.pop('contacts', [])
+#         tagged_users_data = validated_data.pop('tagged_users', [])
+        
+#         event = Event.objects.create(**validated_data)
+        
+#         # Add contacts to event
+#         for contact_data in contacts_data:
+#             contact, _ = ContactInfo.objects.get_or_create(**contact_data)
+#             event.contacts.add(contact)
+        
+#         # Add tagged users to event
+#         for user in tagged_users_data:
+#             event.tagged_users.add(user)
+        
+#         return event
+
+# In serializers.py (Backend)
 class EventSerializer(serializers.ModelSerializer):
     contacts = ContactInfoSerializer(many=True)
+    tagged_users = serializers.PrimaryKeyRelatedField(
+        queryset=UserProfile.objects.all(),
+        many=True,
+        required=False
+    )
 
     class Meta:
         model = Event
-        fields = ['id', 'title', 'description', 'group', 'contacts', 'tagged_users', 'created_at', 'file']
+        fields = ['id', 'title', 'description', 'user', 'group', 'contacts', 'tagged_users', 'file']
 
     def create(self, validated_data):
         contacts_data = validated_data.pop('contacts', [])
         tagged_users_data = validated_data.pop('tagged_users', [])
-        
+
+        # Create the event
         event = Event.objects.create(**validated_data)
-        
-        # Add contacts to event
+
+        # Add contacts (ensure all fields are provided)
         for contact_data in contacts_data:
             contact, _ = ContactInfo.objects.get_or_create(**contact_data)
             event.contacts.add(contact)
-        
-        # Add tagged users to event
-        for user in tagged_users_data:
-            event.tagged_users.add(user)
-        
+
+        # Add tagged users (validate IDs exist)
+        event.tagged_users.set(tagged_users_data)
+
         return event
