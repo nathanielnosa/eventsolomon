@@ -5,14 +5,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from django.contrib.auth import authenticate, login
 from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 from .models import UserProfile, ContactInfo, EventGroup, Event
-from .serializers import (
-    UserProfileSerializer, ContactInfoSerializer, 
-    EventGroupSerializer, EventSerializer,UserSerializer
-)
-
+from .serializers import *
 
 class RegisterView(APIView):
     def post(self, request):
@@ -27,6 +24,7 @@ class RegisterView(APIView):
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request):
         username = request.data.get("username")
         password = request.data.get("password")
@@ -36,17 +34,24 @@ class LoginView(APIView):
 
         user = authenticate(request, username=username, password=password)
         if user is not None:
-            login(request, user)
-            return Response({
-            'id': user.id,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'email': user.email,
-            'username': user.username,
-            'image': user.image.url if user.image else None,  # Example for image
-        }, status=status.HTTP_200_OK)
-        return Response({"error": "Invalid username or password."}, status=status.HTTP_401_UNAUTHORIZED)
+            # Generate JWT Token
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
 
+            return Response({
+                "user": {
+                    "id": user.id,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "email": user.email,
+                    "username": user.username,
+                    "image": user.image.url if user.image else None,
+                },
+                "token": access_token,  # ✅ Return token
+            }, status=status.HTTP_200_OK)
+
+        return Response({"error": "Invalid username or password."}, status=status.HTTP_401_UNAUTHORIZED)
+    
 class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
