@@ -4,5 +4,4 @@ from . models import *
 admin.site.register(UserProfile)
 admin.site.register(Event)
 admin.site.register(EventGroup)
-admin.site.register(Media)
 admin.site.register(ContactInfo)

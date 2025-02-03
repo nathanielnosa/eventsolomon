@@ -7,10 +7,10 @@ from django.contrib.auth import authenticate, login
 from rest_framework.permissions import AllowAny
 
 
-from .models import UserProfile, ContactInfo, EventGroup, Event, Media
+from .models import UserProfile, ContactInfo, EventGroup, Event
 from .serializers import (
     UserProfileSerializer, ContactInfoSerializer, 
-    EventGroupSerializer, EventSerializer, MediaSerializer
+    EventGroupSerializer, EventSerializer,UserSerializer
 )
 
 
@@ -37,11 +37,25 @@ class LoginView(APIView):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return Response({"message": "Login successful."}, status=status.HTTP_200_OK)
+            return Response({
+            'id': user.id,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'username': user.username,
+            'image': user.image.url if user.image else None,  # Example for image
+        }, status=status.HTTP_200_OK)
         return Response({"error": "Invalid username or password."}, status=status.HTTP_401_UNAUTHORIZED)
 
+class UserDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class EventView(APIView):
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, event_id=None):
@@ -64,11 +78,10 @@ class EventView(APIView):
 
 
 class EventGroupView(APIView):
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        groups = EventGroup.objects.all()
+        groups = EventGroup.objects.filter(created_by=request.user) 
         serializer = EventGroupSerializer(groups, many=True)
         return Response(serializer.data)
 
