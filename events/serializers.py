@@ -71,28 +71,36 @@ class EventGroupSerializer(serializers.ModelSerializer):
 
 #         return event
 
+# class EventSerializer(serializers.ModelSerializer):
+
+    # contact_name = serializers.CharField(write_only=True)
+    # contact_email = serializers.EmailField(write_only=True)
+    # contact_phone = serializers.CharField(write_only=True)
+    # contact_address = serializers.CharField(write_only=True)
+
+    # class Meta:
+    #     model = Event
+    #     fields = '__all__'
+    #     extra_fields = ['contact_name', 'contact_email', 'contact_phone', 'contact_address']
+
+    # def create(self, validated_data):
+    #     # Extract contact info
+    #     contact_info = {
+    #         'name': validated_data.pop('contact_name'),
+    #         'email': validated_data.pop('contact_email'),
+    #         'phone': validated_data.pop('contact_phone'),
+    #         'address': validated_data.pop('contact_address'),
+    #     }
+        
+    #     # Create event
+    #     event = super().create(validated_data)
+    #     event.contact_info = contact_info
+    #     event.save()
+    #     return event
+
 class EventSerializer(serializers.ModelSerializer):
-    contact_name = serializers.CharField(write_only=True)
-    contact_email = serializers.EmailField(write_only=True)
-    contact_phone = serializers.CharField(write_only=True)
-    contact_address = serializers.CharField(write_only=True)
+    contacts = ContactInfoSerializer(many=True)  # Using serializer for contacts
 
     class Meta:
         model = Event
-        fields = '__all__'
-        extra_fields = ['contact_name', 'contact_email', 'contact_phone', 'contact_address']
-
-    def create(self, validated_data):
-        # Extract contact info
-        contact_info = {
-            'name': validated_data.pop('contact_name'),
-            'email': validated_data.pop('contact_email'),
-            'phone': validated_data.pop('contact_phone'),
-            'address': validated_data.pop('contact_address'),
-        }
-        
-        # Create event
-        event = super().create(validated_data)
-        event.contact_info = contact_info
-        event.save()
-        return event
+        fields = ['id', 'title', 'description', 'group', 'contacts', 'tagged_users', 'created_at', 'file']
