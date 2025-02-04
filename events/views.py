@@ -57,7 +57,7 @@ class LoginView(APIView):
 class UserListView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure that only authenticated users can access this endpoint
     def get(self, request):
-        users = User.objects.all()  # Get all users from the database
+        users = UserProfile.objects.all()  # Get all users from the database
         serializer = UserSerializer(users, many=True)  # Serialize all users
         return Response(serializer.data, status=status.HTTP_200_OK)
 
