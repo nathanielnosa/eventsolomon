@@ -7,6 +7,7 @@ from django.contrib.auth import authenticate, login
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 
+import json
 
 from .models import UserProfile, ContactInfo, EventGroup, Event
 from .serializers import *
@@ -75,11 +76,22 @@ class EventView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        # Manually parse the FormData
-        data = request.data
+        data = request.data.copy()  # Ensure mutability
+        
         if isinstance(data.get('contacts'), str):
-            data['contacts'] = json.loads(data['contacts'])  # Convert string to list/dict
-        data['tagged_users'] = request.data.getlist('tagged_users') 
+            try:
+                data['contacts'] = json.loads(data['contacts'])  # Convert string to list/dict
+            except json.JSONDecodeError:
+                return Response({"error": "Invalid contacts format"}, status=status.HTTP_400_BAD_REQUEST)
+
+        tagged_users = request.data.get('tagged_users', [])
+        if not isinstance(tagged_users, list):  
+            try:
+                tagged_users = json.loads(tagged_users)
+            except (json.JSONDecodeError, TypeError):
+                return Response({"error": "Invalid tagged_users format"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        data['tagged_users'] = tagged_users
         
         serializer = EventSerializer(data=data, context={'request': request})
         if serializer.is_valid():
