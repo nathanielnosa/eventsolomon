@@ -68,6 +68,7 @@ class UserDetailView(APIView):
         serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 class EventView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -81,30 +82,101 @@ class EventView(APIView):
             events = Event.objects.all()
             serializer = EventSerializer(events, many=True)
         return Response(serializer.data)
+    
 
     def post(self, request):
-        data = request.data.copy()  # Ensure mutability
-        
-        if isinstance(data.get('contacts'), str):
-            try:
-                data['contacts'] = json.loads(data['contacts'])  # Convert string to list/dict
-            except json.JSONDecodeError:
-                return Response({"error": "Invalid contacts format"}, status=status.HTTP_400_BAD_REQUEST)
+        data = request.data.copy()
 
-        tagged_users = request.data.get('tagged_users', [])
-        if not isinstance(tagged_users, list):  
-            try:
-                tagged_users = json.loads(tagged_users)
-            except (json.JSONDecodeError, TypeError):
-                return Response({"error": "Invalid tagged_users format"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        data['tagged_users'] = tagged_users
-        
-        serializer = EventSerializer(data=data, context={'request': request})
+        # ===== 1. Process Group =====
+        group_id = data.get("group")
+        if not group_id:
+            return Response({"error": "Group is required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            group = EventGroup.objects.get(id=int(group_id))
+        except (ValueError, EventGroup.DoesNotExist):
+            return Response({"error": "Invalid group ID"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ===== 2. Process Tagged Users =====
+        tagged_users = request.data.getlist("tagged_users", [])  # 🚨 Use getlist() for multi-values
+        try:
+            tagged_users = [int(uid) for uid in tagged_users]
+        except ValueError:
+            return Response({"error": "Tagged users must be integer IDs"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ===== 3. Process Contacts =====
+        contacts_str = data.get("contacts", "[]")
+        try:
+            contacts = json.loads(contacts_str)  # Parse JSON string to list
+        except json.JSONDecodeError:
+            return Response({"error": "Invalid contacts format"}, status=status.HTTP_400_BAD_REQUEST)
+
+        contact_ids = []
+        for contact in contacts:
+            if isinstance(contact, dict):
+                # Validate required fields
+                required = ["name", "email", "phone", "address"]
+                if not all(k in contact for k in required):
+                    return Response({"error": f"Missing contact fields. Required: {required}"}, status=400)
+                # Create new contact
+                new_contact = ContactInfo.objects.create(**contact)
+                contact_ids.append(new_contact.id)
+            else:
+                return Response({"error": "Contacts must be objects"}, status=400)
+
+        # ===== 4. Prepare final data =====
+        data = {
+            "title": data.get("title"),
+            "description": data.get("description"),
+            "user": request.user.id,
+            "group": group.id,
+            "contacts": contact_ids,
+            "tagged_users": tagged_users,
+            "file": data.get("file"),
+        }
+        print("b_s_Contacts:", contacts)
+        print("b_s_Tagged Users:", tagged_users)
+        print("b_s_Group ID:", group_id)
+        # ===== 5. Validate & Save =====
+        serializer = EventSerializer(data=data)
         if serializer.is_valid():
-            serializer.save(user=self.request.user)
+            event = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+            print("Contacts:", contacts)
+            print("Tagged Users:", tagged_users)
+            print("Group ID:", group_id)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+    # def post(self, request):
+    #     data = request.data.copy()
+
+    #     # Handle contacts: create new or use existing contact IDs
+    #     contacts_data = data.get("contacts", [])
+    #     contact_ids = []
+
+    #     for contact in contacts_data:
+    #         if isinstance(contact, dict):  # If a dict, create new contact
+    #             new_contact = ContactInfo.objects.create(**contact)
+    #             contact_ids.append(new_contact.id)
+    #         else:
+    #             contact_ids.append(contact)  # If an ID, add it directly
+
+    #     data["contacts"] = contact_ids
+
+    #     # Ensure group ID exists
+    #     group_id = data.get("group")
+    #     if not EventGroup.objects.filter(id=group_id).exists():
+    #         return Response({"error": "Invalid group ID"}, status=status.HTTP_400_BAD_REQUEST)
+
+    #     serializer = EventSerializer(data=data, context={"request": request})
+    #     if serializer.is_valid():
+    #         event = serializer.save(user=request.user)
+    #         event.contacts.set(contact_ids)  # Set many-to-many relationship
+    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class EventGroupView(APIView):
     permission_classes = [IsAuthenticated]
