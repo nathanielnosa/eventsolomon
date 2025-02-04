@@ -44,7 +44,7 @@ class EventGroupSerializer(serializers.ModelSerializer):
 
 class EventSerializer(serializers.ModelSerializer):
     contacts = ContactInfoSerializer(many=True)
-
+    file = serializers.FileField(required=False, allow_null=True)
     class Meta:
         model = Event
         fields = ['id', 'title', 'description', 'group', 'contacts', 'tagged_users', 'created_at', 'file']
@@ -52,7 +52,7 @@ class EventSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         contacts_data = validated_data.pop('contacts', [])
         tagged_users_data = validated_data.pop('tagged_users', [])
-        
+        validated_data['user'] = self.context['request'].user
         event = Event.objects.create(**validated_data)
         
         # Add contacts to event
