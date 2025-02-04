@@ -76,9 +76,13 @@ class EventView(APIView):
 
     def post(self, request):
         # Manually parse the FormData
-        data = request.data.dict()
-        data['contacts'] = json.loads(data.get('contacts', '[]'))
-        data['tagged_users'] = request.data.getlist('tagged_users')
+        data = request.data
+        if isinstance(data.get('contacts'), str):
+            data['contacts'] = json.loads(data['contacts'])  # Convert string to list/dict
+    
+        data['tagged_users'] = request.data.getlist('tagged_users') 
+        # data['contacts'] = json.loads(data.get('contacts', '[]'))
+        # data['tagged_users'] = request.data.getlist('tagged_users')
         
         serializer = EventSerializer(data=data, context={'request': request})
         if serializer.is_valid():
