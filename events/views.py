@@ -52,10 +52,17 @@ class LoginView(APIView):
             }, status=status.HTTP_200_OK)
 
         return Response({"error": "Invalid username or password."}, status=status.HTTP_401_UNAUTHORIZED)
-    
+
+
+class UserListView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure that only authenticated users can access this endpoint
+    def get(self, request):
+        users = User.objects.all()  # Get all users from the database
+        serializer = UserSerializer(users, many=True)  # Serialize all users
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
-
     def get(self, request):
         user = request.user
         serializer = UserSerializer(user)

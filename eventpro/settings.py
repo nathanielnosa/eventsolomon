@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-&lq_7h(yr86+0heuaf06#mz%gs43(yjd7i)1l(ty^-2(ftaaux'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG =  True
+DEBUG =  False
 # ALLOWED_HOSTS = []
 ALLOWED_HOSTS = ['localhost','https://eventsolomon.onrender.com','eventsolomon.onrender.com','https://eventsolomons.netlify.app']
 
