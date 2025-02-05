@@ -55,10 +55,10 @@ class LoginView(APIView):
 
 
 class UserListView(APIView):
-    permission_classes = [IsAuthenticated]  # Ensure that only authenticated users can access this endpoint
+    permission_classes = [IsAuthenticated]  
     def get(self, request):
-        users = UserProfile.objects.all()  # Get all users from the database
-        serializer = UserSerializer(users, many=True)  # Serialize all users
+        users = UserProfile.objects.all()  
+        serializer = UserSerializer(users, many=True)  
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class UserDetailView(APIView):
@@ -133,50 +133,44 @@ class EventView(APIView):
             "tagged_users": tagged_users,
             "file": data.get("file"),
         }
-        print("b_s_Contacts:", contacts)
-        print("b_s_Tagged Users:", tagged_users)
-        print("b_s_Group ID:", group_id)
+        
         # ===== 5. Validate & Save =====
         serializer = EventSerializer(data=data)
         if serializer.is_valid():
             event = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-            print("Contacts:", contacts)
-            print("Tagged Users:", tagged_users)
-            print("Group ID:", group_id)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+# //::::::::::::::::    
+class EventDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk):
+        try:
+            event = Event.objects.get(pk=pk, user=self.request.user)
+            return event
+        except Event.DoesNotExist:
+            print(f"Event not found: ID={pk}, User={self.request.user.id}")
+            raise Http404
+    def get(self, request, pk):
+        event = self.get_object(pk)
+        serializer = EventSerializer(event)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        event = self.get_object(pk)
+        serializer = EventSerializer(event, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-
-    # def post(self, request):
-    #     data = request.data.copy()
-
-    #     # Handle contacts: create new or use existing contact IDs
-    #     contacts_data = data.get("contacts", [])
-    #     contact_ids = []
-
-    #     for contact in contacts_data:
-    #         if isinstance(contact, dict):  # If a dict, create new contact
-    #             new_contact = ContactInfo.objects.create(**contact)
-    #             contact_ids.append(new_contact.id)
-    #         else:
-    #             contact_ids.append(contact)  # If an ID, add it directly
-
-    #     data["contacts"] = contact_ids
-
-    #     # Ensure group ID exists
-    #     group_id = data.get("group")
-    #     if not EventGroup.objects.filter(id=group_id).exists():
-    #         return Response({"error": "Invalid group ID"}, status=status.HTTP_400_BAD_REQUEST)
-
-    #     serializer = EventSerializer(data=data, context={"request": request})
-    #     if serializer.is_valid():
-    #         event = serializer.save(user=request.user)
-    #         event.contacts.set(contact_ids)  # Set many-to-many relationship
-    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    def delete(self, request, pk):
+        event = self.get_object(pk)
+        event.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+# //::::::::::::::::    
 
 class EventGroupView(APIView):
     permission_classes = [IsAuthenticated]
@@ -193,7 +187,36 @@ class EventGroupView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# backend/events/views.py
+
+class GroupDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk):
+        try:
+            group = EventGroup.objects.get(pk=pk, created_by=self.request.user)
+            return group
+        except EventGroup.DoesNotExist:
+            print(f"Group not found: ID={pk}, User={self.request.user.id}")
+            raise Http404
+
+    def get(self, request, pk):
+        group = self.get_object(pk)
+        serializer = EventGroupSerializer(group)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        group = self.get_object(pk)
+        serializer = EventGroupSerializer(group, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        group = self.get_object(pk)
+        group.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 class UserLookupView(APIView):
     permission_classes = [IsAuthenticated]
 

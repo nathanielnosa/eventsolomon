@@ -42,30 +42,6 @@ class EventGroupSerializer(serializers.ModelSerializer):
         model = EventGroup
         fields = ['id', 'name', 'description', 'created_by']
 
-# class EventSerializer(serializers.ModelSerializer):
-#     contacts = ContactInfoSerializer(many=True)
-#     file = serializers.FileField(required=False, allow_null=True)
-#     class Meta:
-#         model = Event
-#         fields = ['id', 'title', 'description', 'group', 'contacts', 'tagged_users', 'created_at', 'file']
-
-#     def create(self, validated_data):
-#         contacts_data = validated_data.pop('contacts', [])
-#         tagged_users_data = validated_data.pop('tagged_users', [])
-#         validated_data['user'] = self.context['request'].user
-#         event = Event.objects.create(**validated_data)
-        
-#         # Add contacts to event
-#         for contact_data in contacts_data:
-#             contact, _ = ContactInfo.objects.get_or_create(**contact_data)
-#             event.contacts.add(contact)
-        
-#         # Add tagged users to event
-#         for user in tagged_users_data:
-#             event.tagged_users.add(user)
-        
-#         return event
-
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
